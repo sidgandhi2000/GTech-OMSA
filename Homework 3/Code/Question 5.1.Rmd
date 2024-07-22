@@ -1,0 +1,64 @@
+---
+title: "Question 5.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r 5.1}
+
+#Load library
+library(outliers); library(moments); library(PMCMRplus)
+
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 5.1\\uscrime.txt", 
+                   stringsAsFactors = F, header = T)
+
+#Test for normality 
+shapiro.test(data[,16])
+
+#Plot the data and its Q-Q plot
+plot(data[,16])
+qqnorm(data[,16], pch=1, frame=FALSE)
+
+
+#Create a density plot for the data to visualize it
+#Also calculate outliers, skew, and kurtosis of the data
+plot(density(data[,16]))
+skewness(data[,16])
+kurtosis(data[,16]) #Leptokurtic
+outlier(data[,16])
+
+#Perform the Grubbs' Test
+outliers <- grubbs.test(data[,16], type = 11)
+outliers
+
+#Perform with type=10 since in the density plot, we do notice a right skew
+outliers1 <- grubbs.test(data[,16], type = 10)
+outliers1
+
+#Remove the largest data point and try again
+outliers2 <- grubbs.test(data[-26,16], type = 10)
+outliers2
+
+
+#Create a box-and-whisker plot for the data
+boxplot(data[,16], ylab="Number of Crimes per 100,000 people" )
+
+#Check what are the outliers from the boxplot
+boxplot(data[,16], plot=FALSE)$out
+
+#Because based on the plot, this dataset had more than one outlier
+#I decided to use the GESD to investigate
+a <- gesdTest(data[,16], 7)
+a
+summary(a)
+
+
+```

@@ -1,0 +1,60 @@
+---
+title: "Question 2.2.3"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r 2.2.3}
+#Load library
+library(kknn)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\Downloads\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Build a function to check accuracy of K-nearest-neighbors
+checking_accuracy <- function(A){
+  
+  #Create a vector with all zeroes
+  prediction <- rep(0, (nrow(data)))
+  
+  #For each row, use the other rows to guess its response
+  for (i in 1:nrow(data)){
+    #data[-i,] enables us to remove row i when finding nearest neighbours
+    #Create the model
+    knn_model = kknn(V11~V1+V2+V3+V4+V5+V6+V7+V8+V9+V10, data[-i,], data[i,], 
+                     k=A, scale = T)
+    
+    #Rounds to 0 if fitted value less than 0.5 and to 1 if greater than 0.5
+    prediction[i] <- as.integer(fitted(knn_model) + 0.5)
+  }
+  
+  #Now we calculate the fraction of correct predictions
+  fraction_correct = sum(prediction == data[,11]) / nrow(data)
+  return(fraction_correct)
+}
+
+#Create an empty vector
+acc = rep(0,50)
+#Add in the values of Knn with "A" number of neighbors
+for (A in 1:50){
+  acc[A] = checking_accuracy(A)
+}
+
+#Accuracy as percentage
+acc <- acc * 100 
+acc
+
+#Plot accuracy
+plot(acc, main="Percent Accuracy of Model with K-Nearest Neighbors", xlab="Number of Nearest Neighbors", ylab="Percent Accuracy of Model")
+
+#Analyze the data
+max(acc)
+which.max(acc)
+```

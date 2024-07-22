@@ -1,0 +1,254 @@
+---
+title: "Question 14.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Question 14.1.1.1}
+
+#This is the mean imputation
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 14.1\\breast-cancer-wisconsin.data.txt", stringsAsFactors = F, header = F, sep=",")
+
+#Upon analysis of the table, only V7 has missing values
+missing_val <- data[which(data$V7 == "?"), ]
+missing_val
+
+#Checking the 5% rule for imputation
+five_rule <- nrow(data[which(data$V7 == "?"), ])/nrow(data)
+five_rule
+
+#Replace ? values with NA
+mean_imp_data <- data
+mean_imp_data["V7"][mean_imp_data["V7"] == "?"] <- NA
+
+#Convert column to numeric
+mean_imp_data$V7 <- as.numeric(mean_imp_data$V7)
+
+#Perform mean imputation
+mean_imp_data$V7[is.na(mean_imp_data$V7)] <- mean(mean_imp_data$V7, na.rm = T)
+mean_imp_data$V7[is.na(mean_imp_data$V7)] <- mean(mean_imp_data$V7, na.rm = T)
+
+#Convert column to integer
+mean_imp_data$V7 <- as.integer(mean_imp_data$V7)
+
+```
+
+AAA
+
+```{r Question 14.1.1.2}
+
+#This is mode imputation
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 14.1\\breast-cancer-wisconsin.data.txt", stringsAsFactors = F, header = F, sep=",")
+
+#Replace ? values with NA
+mode_imp_data <- data
+mode_imp_data["V7"][mode_imp_data["V7"] == "?"] <- NA
+
+#Get values in df
+vals <- unique(mode_imp_data$V7[!is.na(mode_imp_data$V7)])
+mode <- vals[which.max(tabulate(match(mode_imp_data$V7, vals)))]
+
+#Replace NA values with the mode
+mode_imp_data$V7[is.na(mode_imp_data$V7)] <- mode
+
+#Convert column to integer
+mode_imp_data$V7 <- as.integer(mode_imp_data$V7)
+```
+
+AAA
+
+```{r 14.1.2}
+
+#This is regression imputation
+#Load Libraries
+library("DAAG")
+
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 14.1\\breast-cancer-wisconsin.data.txt", stringsAsFactors = F, header = F, sep=",")
+
+#Get the missing indices
+missing <- which(data$V7 == "?", arr.ind = T)
+missing
+
+#Prepare the needed data
+reg_imp_data <- data[-missing, 2:10]
+reg_imp_data$V7 <- as.integer(reg_imp_data$V7)
+
+#Create a linear model
+reg_m <- lm(V7~V2+V3+V4+V5+V6+V8+V9+V10, data=reg_imp_data)
+summary(reg_m)
+
+#Need to select only the best variables so we can use stepwise regression
+step(reg_m)
+
+#Generate a better model now
+reg_ms <- lm(V7~V2+V4+V5+V8, data = reg_imp_data)
+summary(reg_ms)
+
+#10-fold CV to check quality of model
+reg_mcv <- cv.lm(reg_imp_data, reg_ms, m=10)
+summary(reg_mcv)
+
+#Calculate R-squared to see quality of the model
+TSS <- sum((as.numeric(data[-missing,]$V7) - mean(as.numeric(data[-missing,]$V7)))^2)
+R2 <- 1 - attr(reg_mcv,"ms")*nrow(data[-missing,])/TSS
+R2
+
+#Now it's time to predict the values
+preds <- predict(reg_ms, newdata = data[missing,])
+preds
+impd <- data
+impd[missing, ]$V7 <- preds
+
+#Convert to numeric since they're character values right now
+impd$V7 <- as.numeric(impd$V7)
+impd[missing, ]$V7 <- round(preds)
+
+#Convert back to integer finally
+impd$V7 <- as.integer(impd$V7)
+
+#Check to make sure none of the values are out of bounds
+check <- impd[missing, "V7"]
+check
+```
+
+AAA
+
+```{r 14.1.3}
+
+#This is regression imputation with perturbation
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 14.1\\breast-cancer-wisconsin.data.txt", stringsAsFactors = F, header = F, sep=",")
+
+#Get the missing indices
+missing <- which(data$V7 == "?", arr.ind = T)
+missing
+
+#Prepare the needed data
+reg_imp_data <- data[-missing, 2:10]
+reg_imp_data$V7 <- as.integer(reg_imp_data$V7)
+
+#Create a linear model
+reg_m <- lm(V7~V2+V3+V4+V5+V6+V8+V9+V10, data=reg_imp_data)
+summary(reg_m)
+
+#Need to select only the best variables so we can use stepwise regression
+step(reg_m)
+
+#Generate a better model now
+reg_ms <- lm(V7~V2+V4+V5+V8, data = reg_imp_data)
+summary(reg_ms)
+
+#Predict the values
+preds <- predict(reg_ms, newdata = data[missing,])
+preds
+
+#Perturbation values using a normal distribution
+perts <- rnorm(nrow(data[missing,]), preds, sd(preds))
+perts
+
+#Update the df
+pert_data <- data
+pert_data[missing, ]$V7 <- perts
+
+#Convert to numeric, round, then convert to integer
+pert_data$V7 <- as.numeric(pert_data$V7)
+pert_data[missing, ]$V7 <- round(perts)
+pert_data$V7 <- as.integer(pert_data$V7)
+
+#Check to make sure none of the values are out of bounds
+check <- pert_data[missing, "V7"]
+check
+
+#Out of bound values (e.g., negatives) need to be corrected
+pert_data$V7[pert_data$V7 > 10] <- 10
+pert_data$V7[pert_data$V7 < 1] <- 1
+
+#Check again
+check <- pert_data[missing, "V7"]
+check
+
+```
+
+AAA
+
+```{r 14.1 Compare}
+
+#This is comparing the different imputation methods to see which works best
+#Load Libraries
+library(missForest); library(mice)
+
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 14.1\\breast-cancer-wisconsin.data.txt", stringsAsFactors = F, header = F, sep=",")
+
+#Split the dataset into training and test sets
+set.seed(1)
+train_index <- sample(nrow(data), round(0.7*nrow(data)), replace = FALSE)
+train <- data[train_index, ]
+test <- data[-train_index, ]
+
+#Set the missing values to NA
+train_missing <- train
+train_missing["V7"][train_missing["V7"] == "?"] <- NA
+train_missing$V7 <- as.numeric(train_missing$V7)
+test_missing <- test
+test_missing["V7"][test_missing["V7"] == "?"] <- NA
+test_missing$V7 <- as.numeric(test_missing$V7)
+
+#Mean/mode imputation
+train_imputed_mean <- train_missing
+train_imputed_mean[] <- lapply(train_imputed_mean, function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x))
+train_imputed_mean$V7 <- pmax(pmin(train_imputed_mean$V7, 10), 1)
+test_imputed_mean <- test_missing
+test_imputed_mean[] <- lapply(test_imputed_mean, function(x) ifelse(is.na(x), mean(x, na.rm = TRUE), x))
+test_imputed_mean$V7 <- pmax(pmin(test_imputed_mean$V7, 10), 1)
+
+#Linear regression imputation
+train_imputed_lm <- mice(train_missing, method = "norm.predict", m = 10)
+test_imputed_lm <- mice(test_missing, method = "norm.predict", m = 10)
+train_imputed_lm <- complete(train_imputed_lm, action = "long")
+train_imputed_lm$V7 <- pmax(pmin(train_imputed_lm$V7, 10), 1)
+test_imputed_lm <- complete(test_imputed_lm, action = "long")
+test_imputed_lm$V7 <- pmax(pmin(test_imputed_lm$V7, 10), 1)
+
+#Linear regression with perturbation imputation
+train_imputed_lmp <- missForest(train_missing)
+train_imputed_lmp$ximp$V7 <- pmax(pmin(train_imputed_lmp$ximp$V7, 10), 1)
+test_imputed_lmp <- missForest(test_missing)
+test_imputed_lmp$ximp$V7 <- pmax(pmin(test_imputed_lmp$ximp$V7, 10), 1)
+
+#Fit a linear regression model and compute the prediction error
+fit_mean <- lm(V11 ~ ., data = train_imputed_mean)
+pred_mean <- predict(fit_mean, newdata = test_imputed_mean)
+error_mean <- mean((pred_mean - test$V11)^2)
+rsq_mean <- summary(fit_mean)$r.squared
+
+fit_lm <- lm(V11 ~ ., data = train_imputed_lm)
+pred_lm <- predict(fit_lm, newdata = test_imputed_lm)
+error_lm <- mean((pred_lm - test$V11)^2)
+rsq_lm <- summary(fit_lm)$r.squared
+
+fit_lmp <- lm(V11 ~ ., data = train_imputed_lmp$ximp)
+pred_lmp <- predict(fit_lmp, newdata = test_imputed_lmp$ximp)
+error_lmp <- mean((pred_lmp - test$V11)^2)
+rsq_lmp <- summary(fit_lmp)$r.squared
+
+#Print the prediction errors
+cat("Mean imputation error:", error_mean, "\n")
+cat("Mean imputation R-squared:", rsq_mean, "\n")
+cat("Linear regression imputation error:", error_lm, "\n")
+cat("Linear regression imputation R-squared:", rsq_lm, "\n")
+cat("Linear regression with perturbation imputation error:", error_lmp, "\n")
+cat("Linear regression with perturbation imputation R-squared:", rsq_lmp, "\n")
+
+
+```
+

@@ -1,0 +1,29 @@
+---
+title: "Question 12.2"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+#Load Libraries
+library(FrF2)
+
+set.seed(1)
+
+frac_design <- FrF2(nruns = 16, nfactors = 10)
+summary(frac_design)
+frac_design
+
+set.seed(2)
+frac_design2 <- FrF2(nruns = 16, nfactors = 10)
+summary(frac_design2)
+frac_design2
+
+```
+

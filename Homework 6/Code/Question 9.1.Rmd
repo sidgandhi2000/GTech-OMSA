@@ -1,0 +1,119 @@
+---
+title: "Question 9.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 9.1\\uscrime.txt", stringsAsFactors = FALSE, header = TRUE)
+
+#Use PCA and store it
+data_PCA <- prcomp(data[,1:15], scale. = TRUE)
+data_PCA
+
+summary(data_PCA)
+
+```
+The summary of this data orders the principal components by their overall proportion of total variance. Components one to three appear to have the greatest proportion of overall variance. However, I want to more concretely identify the number of components to use. For this, I will generate a few plots, including a scree plot, and examine it. 
+
+
+```{r cars 2}
+
+#Used code from PCA lesson on https://rpubs.com/JanpuHou/278584 
+#The following code will generate four plots
+pcaPlots <- function(x) {
+    x.var <- x$sdev ^ 2
+    x.pvar <- x.var/sum(x.var)
+    print("Proportions of variance:")
+    print(x.pvar)
+    
+    par(mfrow=c(2,2))
+    plot(x.pvar,xlab="Principal component", ylab="Proportion of variance explained", ylim=c(0,1), type='b')
+    plot(cumsum(x.pvar),xlab="Principal component", ylab="Cumulative Proportion of variance explained", ylim=c(0,1), type='b')
+    screeplot(x)
+    screeplot(x,type="l")
+    par(mfrow=c(1,1))
+}
+
+#Generate PCA plots and a scree plot
+pcaPlots(data_PCA)
+screeplot(data_PCA, main="Scree Plot", type="line")
+abline(h=1, col="blue")
+
+```
+Using a threshold of one, the scree plot seems to indicate that the first five principal components are the most important. Looking at the other generated plots, it appears that the elbow point is at 5 principal components as well. Therefore, using all of these observations, I will use pc = five for my model. 
+
+
+```{r cars3}
+
+PC_chosen <- 5
+crimePCA <- cbind(data_PCA$x[,1:PC_chosen], data[,16])
+crimePCA
+
+#Create lm model
+lm_model <- lm(V6~., data = as.data.frame(crimePCA))
+summary(lm_model)
+
+```
+Here, I generated a linear regression model using the number of principal components chosen before and the original crime data. 
+
+```{r cars 4}
+#Transformation steps and estimation
+intercept <- lm_model$coefficients[1]
+beta_vec <- lm_model$coefficients[2:(PC_chosen+1)]
+alpha_vec <- data_PCA$rotation[,1:PC_chosen] %*% beta_vec
+
+mu <- sapply(data[,1:15], mean)
+sigma <- sapply(data[,1:15], sd)
+
+og_alpha <- alpha_vec/sigma
+og_beta <- intercept - sum(alpha_vec*mu/sigma)
+
+t(og_alpha)
+og_beta
+
+estimate <- as.matrix(data[,1:15]) %*% og_alpha + og_beta
+
+#Calculate R^2 metrics
+SSE <- sum((estimate-data[,16])^2)
+SStot <- sum((data[,16] - mean(data[,16]))^2)
+
+R2 <- 1- (SSE/SStot)
+R2
+
+adj_R2 <- R2 - (1-R2)*PC_chosen/(nrow(data) - PC_chosen - 1)
+adj_R2
+
+```
+Here, I found the intercept and created the alpha and beta vectors. I also obtained the original alpha and beta values using the calculated values for mu and sigma. Following this, I made some estimations. As can be seen, the form of the "estimate" resembles the equation of a line (y = aX + b where a = og_alpha and b = og_beta). The estimates were then used to calculate the R^2 and adjusted R^2 values. As a quick note, in regards to the R^2 values, it can be seen that they are lower than the values I obtained for last week's homework (for the model using only select predictors): R-squared:  0.7659, Adjusted R-squared:  0.7307. 
+
+
+```{r cars 5}
+
+#Test data from last week
+test <- data.frame(M = 14.0, So = 0, Ed = 10.0, Po1 = 12.0, Po2 = 15.5,
+                      LF = 0.640,
+                      M.F = 94.0,
+                      Pop = 150,
+                      NW = 1.1,
+                      U1 = 0.120,
+                      U2 = 3.6,
+                      Wealth = 3200,
+                      Ineq = 20.1,
+                      Prob = 0.04,
+                      Time = 39.0)
+
+test_pred <- data.frame(predict(data_PCA, test))
+test_pred_model <- predict(lm_model, test_pred)
+test_pred_model
+
+
+```
+Finally, I used the test data given last week to see how the new linear regression model fares compared to the one from last week. The predicted value of crime I obtained for last week's homework was 1304 while the value I obtained with the new model is 1389. So we can see that the two values are similar; however, when we flatly compare the R^2 values, I would say that this new model using PCA (R^2 = 0.6451941; adj R^2 = 0.601925) is slightly worse than the previous week's model (R^2 = 0.7659; adj R^2 = 0.7307). In favour of the PCA model though, it did obtain a similar prediction with less predictors, so it shows that there is quite a bit of merit to it. I would be curious to see how the results change with a larger data set as well. 
+

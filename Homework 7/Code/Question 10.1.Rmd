@@ -1,0 +1,114 @@
+---
+title: "Question 10.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r 10.1A}
+#This is 10.1A
+
+library(DAAG); library(tree)
+
+set.seed(7)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 10.1\\uscrime.txt",
+stringsAsFactors = F, header = T)
+
+#Create regression tree
+data_tree <- tree(Crime~., data = data)
+
+#Only four factors were used to create the tree (Po1, Pop, LF, and NW)
+summary(data_tree)
+data_tree$frame
+
+#Plot the tree
+plot(data_tree)
+text(data_tree)
+
+#We can consider the deviance of trees with different numbers of terminal nodes
+#Based on the values, we can decide how to prune the tree if we want
+
+cv_data_tree <- cv.tree(data_tree)
+plot(cv_data_tree$size, cv_data_tree$dev, type= "b")
+
+#Based on the plot, the lowest deviation is with 5 or 7 terminal nodes
+
+#Pruning the tree
+terminal_nodes <- 5
+prune_data_tree <- prune.tree(data_tree, best = terminal_nodes)
+plot(prune_data_tree)
+text(prune_data_tree)
+summary(prune_data_tree)
+
+#If we compare the residual mean deviance, pruning the tree increased it
+# from 47390 to 54210
+#Therefore, let's stick with the unaltered model
+
+#Let's calculate the quality of fit of the model
+data_tree_pred <- predict(data_tree, data=data[,1:15])
+RSS <- sum((data_tree_pred - data[,16])^2)
+TSS <- sum((data[,16] - mean(data[,16]))^2)
+R2 <- 1 - RSS/TSS
+R2
+
+#The R-squared is therefore 0.7245
+
+#We can also investigate the R-squared value if we used the pruned tree
+data_tree_pred2 <- predict(prune_data_tree, data=data[,1:15])
+RSS <- sum((data_tree_pred2 - data[,16])^2)
+TSS <- sum((data[,16] - mean(data[,16]))^2)
+R2 <- 1 - RSS/TSS
+R2
+
+#We see that it is lower than the R-squared of the unaltered model
+
+#As we used the training data above, we can also use CV to check model quality
+#We can check the SSE for each size of tree without cross-validation
+
+prune.tree(data_tree)$size
+prune.tree(data_tree)$dev
+
+#Let's check the cross validation results now
+cv_data_tree$size
+cv_data_tree$dev
+
+#These errors are much, much larger, which indicates overfitting in orig. model
+
+```
+
+```{r 10.1B}
+#This is 10.1B
+
+library(DAAG); library(randomForest)
+
+set.seed(8)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 10.1\\uscrime.txt",
+stringsAsFactors = F, header = T)
+
+#Generate the random forest
+ntry <- 4
+random_forest <- randomForest(Crime~., data = data, mtry = ntry, importance=TRUE)
+summary(random_forest)
+random_forest
+
+#Check quality of model
+pred_data <- predict(random_forest)
+RSS <- sum((pred_data - data[,16])^2)
+TSS <- sum((data[,16] - mean(data[,16]))^2)
+R2 <- 1 - RSS/TSS
+R2
+
+#Look at importance of the model
+importance(random_forest)
+varImpPlot(random_forest)
+```

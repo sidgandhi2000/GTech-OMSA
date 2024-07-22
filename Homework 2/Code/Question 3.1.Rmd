@@ -1,0 +1,228 @@
+---
+title: "Question 3.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r 3.1.A.1 Using train.knn and splitting into testing and training sets}
+
+#Load library
+library(kknn)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 3.1\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Set seed
+set.seed(1)
+
+#Sample 80% of the data and create training and testing data sets 
+random_rows <- sample(1:nrow(data), as.integer(0.80*nrow(data)))
+train_data <- data[random_rows,]
+test_data <- data[-random_rows,]
+
+#Use leave-one-out cross validation on training data set
+k_LOOCV <- train.kknn(V11~., train_data, kmax=100, scale = T)
+k_LOOCV
+
+#Iterate through k-values to find best one in k_LOOCV
+k_value_accs <- rep(0, 100)
+
+for (x in 1:100){
+  a <- fitted(k_LOOCV)[[x]][1:nrow(train_data)]
+  b <- rep(0, nrow(train_data))
+  for (i in 1:length(a)){
+    b[i] <- as.integer(a[i] + 0.5)
+  }
+  k_value_accs[x] <- sum(b==train_data[,11])/nrow(train_data)
+}
+
+
+k_value_accs
+max(k_value_accs)
+which.max(k_value_accs)
+
+
+#Double check using information generated from k_LOOCV (where best k is 19)
+pred_train <- rep(0, nrow(train_data))
+
+for (i in 1:nrow(train_data)){
+  kknn_model_train <- kknn(V11~., train_data[-i,], train_data[i,], k=19, scale=T)
+  pred_train[i] <- as.integer(fitted(kknn_model_train) + 0.5)
+}
+
+accuracy_train <- sum(pred_train==train_data[,11])/nrow(train_data)
+
+#Now to see how a model functions with the test data
+pred_test <- rep(0, nrow(test_data))
+
+for (i in 1:nrow(test_data)){
+  kknn_model_test <- kknn(V11~., test_data[-i,], test_data[i,], k=19, scale=T)
+  pred_test[i] <- as.integer(fitted(kknn_model_test) + 0.5)
+}
+
+accuracy_test <- sum(pred_test==test_data[,11])/nrow(test_data)
+accuracy_test
+
+
+```
+
+
+~Split~
+
+
+```{r 3.1.A.2 Using cv.knn and splitting into training and testing sets}
+
+#Load library
+library(kknn)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 3.1\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Set seed
+set.seed(2)
+
+#Sample 80% of the data and create training and testing data sets 
+random_rows <- sample(1:nrow(data), as.integer(0.80*nrow(data)))
+train_data <- data[random_rows,]
+test_data <- data[-random_rows,]
+
+#Use k-fold cross-validation with folds set to 10
+k_max_accuracy <- rep(0, 100)
+
+for (k in 1:length(k_max_accuracy)) {
+  k_KFCV <- cv.kknn(V11~., train_data, kcv = 10, k = k, scale = T)
+  k_fit <- rep(0, nrow(train_data))
+  
+  for (i in 1:nrow(k_KFCV[[1]])){
+    k_fit[i] <- as.integer(k_KFCV[[1]][i, 2] + 0.5)
+  }
+  
+  accuracy <- sum(k_fit==train_data[,11])/nrow(train_data)
+  k_max_accuracy[k] <- accuracy
+}
+
+max(k_max_accuracy)
+which.max(k_max_accuracy)
+
+#Using the k-values giving the highest accuracy, run a model on the test data
+pred_test <- rep(0, nrow(test_data))
+
+for (i in 1:nrow(test_data)){
+  model <- kknn(V11~., test_data[-i,], test_data[i,], 
+                k=which.max(k_max_accuracy), 
+                scale=T)
+  pred_test[i] <- as.integer(fitted(model) + 0.5)
+}
+
+pred_test
+
+#View the accuracy of the test model
+accuracy_test <- sum(pred_test==test_data[,11])/nrow(test_data)
+accuracy_test
+
+
+```
+
+
+~Split~
+
+
+```{r 3.1 Part B}
+
+#Load library
+library(kknn)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 3.1\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Set seed
+set.seed(10)
+
+#Sample 60% of the data and create training set 
+rr_training <- sample(1:nrow(data), as.integer(0.60*nrow(data)))
+train_data <- data[rr_training,]
+
+#Validation and testing Data (20% each)
+tv_data <- data[-rr_training,]
+
+rr_remaining <- sample(1:nrow(tv_data), as.integer(0.50*nrow(tv_data)))
+
+validation_data <- tv_data[rr_remaining,]
+
+test_data <- tv_data[-rr_remaining,]
+
+#Function to generate k values with highest accuracies for training data
+
+checking_accuracy_train <- function(A) {
+  pred <- rep(0, nrow(train_data))
+  
+  for (i in 1:nrow(train_data)){
+    model <- kknn(V11~., train_data[-i,], train_data[i,], k = A, scale = T)
+    pred[i] <- as.integer(fitted(model) + 0.5)
+  }
+  
+  accuracy <- sum(pred==train_data[,11])/nrow(train_data)
+  return(accuracy)
+  
+}
+
+acc <- rep(0, 20)
+for (A in 1:length(acc)){
+  acc[A] <- checking_accuracy_train(A)
+}
+
+acc
+max(acc)
+which.max(acc)
+
+#k=14 is the highest
+#k values of 5, 6, and 13 are tied for next highest
+
+#Test obtained k values on validation data set
+pred1 <- rep(0, nrow(validation_data))
+
+for (i in 1:nrow(validation_data)){
+  maxk_model1 <- kknn(V11~., validation_data[-i,], validation_data[i,], 
+                k=14, 
+                scale=T)
+  pred1[i] <- as.integer(fitted(maxk_model1) + 0.5)
+}
+
+accuracy1 <- sum(pred1==validation_data[,11])/nrow(validation_data)
+accuracy1
+
+pred2 <- rep(0, nrow(validation_data))
+
+for (i in 1:nrow(validation_data)){
+  maxk_model2 <- kknn(V11~., validation_data[-i,], validation_data[i,], 
+                k=6, 
+                scale=T)
+  pred2[i] <- as.integer(fitted(maxk_model2) + 0.5)
+}
+
+accuracy2 <- sum(pred2==validation_data[,11])/nrow(validation_data)
+accuracy2
+
+#Since both accuracy1 is higher, I'll use k = 14
+pred_test <- rep(0, nrow(test_data))
+
+for (i in 1:nrow(test_data)){
+  test_model <- kknn(V11~., test_data[-i,], test_data[i,], 
+                k=14, 
+                scale=T)
+  pred_test[i] <- as.integer(fitted(test_model) + 0.5)
+}
+
+accuracy_test <- sum(pred_test==test_data[,11])/nrow(test_data)
+accuracy_test
+
+```

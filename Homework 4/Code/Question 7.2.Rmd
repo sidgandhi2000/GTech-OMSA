@@ -1,0 +1,131 @@
+---
+title: "Question 7.2"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Question 7.2 Multiplicative}
+#Load library
+library(stats);
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 7.2\\temps.txt", stringsAsFactors = F, header = T)
+
+#Create time series
+data_vector <- as.vector(unlist(data[,2:21]))
+data_ts <- ts(data_vector, start=1996, frequency=123)
+plot(data_ts)
+
+#Additive
+plot(decompose(data_ts))
+
+#Multiplicative
+plot(decompose(data_ts, type=c("multiplicative")))
+
+#Holt-Winters Multiplicative
+data_HW <- HoltWinters(data_ts, seasonal=c("multiplicative"))
+plot(data_HW)
+
+
+#Plot fitted values
+plot(data_HW$fitted)
+
+
+#CUSUM approach to detect change
+#Seasonal approach
+seasonal <- data_HW$fitted[,4]
+seasonal <- matrix(seasonal, nrow=123)
+
+colnames(seasonal) <- c(1997:2015)
+rownames(seasonal) <- as.vector(data[,1])
+
+dfcusum <- data.frame(matrix(nrow=nrow(seasonal), ncol=ncol(seasonal)))
+colnames(dfcusum) <- colnames(seasonal)
+rownames(dfcusum) <- rownames(seasonal)
+
+for (year in 1:ncol(dfcusum)){
+  dfcusum[1, year] <- 0
+  mean <- mean(seasonal[1:62, year]) #July and August for summer mean
+  stdev <- sd(seasonal[1:62, year])
+  c_value <-  0.5 * stdev
+  threshold <- 5 * stdev
+  change_detect <- NULL
+
+  for (row in 2:nrow(dfcusum)){
+    dfcusum[row,year] <- max(0, dfcusum[row-1, year] + 
+                               (mean - seasonal[row, year] - c_value))
+    if (dfcusum[row, year] >= threshold){
+      change_detect <- append(change_detect, dfcusum[row, year])
+      cat("The year is:", year, "and the date is:", row, "\n")
+      break
+    }
+  }
+}
+
+
+```
+
+```{r Question 7.2 Additive}
+#Load library
+library(stats);
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 7.2\\temps.txt", stringsAsFactors = F, header = T)
+
+#Create time series
+data_vector <- as.vector(unlist(data[,2:21]))
+data_ts <- ts(data_vector, start=1996, frequency=123)
+plot(data_ts)
+
+#Additive
+plot(decompose(data_ts))
+
+#Multiplicative
+plot(decompose(data_ts, type=c("multiplicative")))
+
+#Holt-Winters Additive
+data_HWA <- HoltWinters(data_ts, seasonal=c("additive"))
+plot(data_HWA)
+
+
+#Plot fitted values
+plot(data_HWA$fitted)
+
+
+#CUSUM approach to detect change
+#Seasonal approach
+seasonal <- data_HWA$fitted[,4]
+seasonal <- matrix(seasonal, nrow=123)
+
+colnames(seasonal) <- c(1997:2015)
+rownames(seasonal) <- as.vector(data[,1])
+
+dfcusum <- data.frame(matrix(nrow=nrow(seasonal), ncol=ncol(seasonal)))
+colnames(dfcusum) <- colnames(seasonal)
+rownames(dfcusum) <- rownames(seasonal)
+
+for (year in 1:ncol(dfcusum)){
+  dfcusum[1, year] <- 0
+  mean <- mean(seasonal[1:62, year]) #July and August for summer mean
+  stdev <- sd(seasonal[1:62, year])
+  c_value <-  0.5 * stdev
+  threshold <- 5 * stdev
+  change_detect <- NULL
+
+  for (row in 2:nrow(dfcusum)){
+    dfcusum[row,year] <- max(0, dfcusum[row-1, year] + 
+                               (mean - seasonal[row, year] - c_value))
+    if (dfcusum[row, year] >= threshold){
+      change_detect <- append(change_detect, dfcusum[row, year])
+      cat("The year is:", year, "and the date is:", row, "\n")
+      break
+    }
+  }
+}
+```

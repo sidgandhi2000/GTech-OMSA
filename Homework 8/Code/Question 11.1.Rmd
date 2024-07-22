@@ -1,0 +1,209 @@
+---
+title: "Question 11.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Stepwise}
+#This is the stepwise regression approach
+
+#Load Packages
+library(tidyverse); library(caret); library(leaps); library(MASS)
+
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 11.1\\uscrime.txt", stringsAsFactors = F, header = T)
+
+#Scale Data
+scaledD <- as.data.frame(scale(data[,c(1,3,4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)]))
+scaledD <- cbind(data[,2], scaledD, data[,16])
+colnames(scaledD)[1] <- "So"
+colnames(scaledD)[16] <- "Crime"
+
+#Stepwise regression
+data_model <- lm(Crime~., data = scaledD)
+step_model <- stepAIC(data_model, direction = "both", trace = F)
+summary(step_model)
+
+#Identifying best number of predictors
+set.seed(1)
+
+#10-fold CV
+train.control <- trainControl(method = "cv", number = 10)
+
+#Training model
+step.model <- train(Crime~., data = scaledD, method = "leapSeq", tuneGrid = data.frame(nvmax = 1:15), trControl = train.control)
+
+step.model$results
+step.model$bestTune
+summary(step.model$finalModel)
+
+coef(step.model$finalModel, 6)
+
+#Check CV with LOOC
+#Using all variables
+TotSS <- sum((data$Crime - mean(data$Crime))^2)
+TotSSE <- 0
+
+for (i in 1:nrow(scaledD)){
+  fit_step_i = lm(Crime ~ M+Ed+Po1+M.F+U1+U2+Ineq+Prob, data=scaledD[-i,])
+  pred_i <- predict(fit_step_i, newdata=scaledD[i,])
+  TotSSE <- TotSSE + ((pred_i - data[i, 16])^2)
+}
+
+R2_all <- 1 - TotSSE/TotSS
+R2_all
+
+#Using only significant variables
+TotSS <- sum((data$Crime - mean(data$Crime))^2)
+TotSSE <- 0
+
+for (i in 1:nrow(scaledD)){
+  fit_step_i = lm(Crime ~ M+Ed+Po1+U2+Ineq+Prob, data=scaledD[-i,])
+  pred_i <- predict(fit_step_i, newdata=scaledD[i,])
+  TotSSE <- TotSSE + ((pred_i - data[i, 16])^2)
+}
+
+R2_sig <- 1 - TotSSE/TotSS
+R2_sig
+```
+
+```{r Lasso}
+#This is the lasso regression approach
+
+#Load Packages
+library(tidyverse); library(caret); library(leaps); library(MASS); library(glmnet)
+
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 11.1\\uscrime.txt", stringsAsFactors = F, header = T)
+
+#Scale Data
+scaledD <- as.data.frame(scale(data[,c(1,3,4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)]))
+scaledD <- cbind(data[,2], scaledD, data[,16])
+colnames(scaledD)[1] <- "So"
+colnames(scaledD)[16] <- "Crime"
+
+set.seed(1)
+
+#Lasso regression
+
+lasso <- cv.glmnet(x=as.matrix(scaledD[,-16]), y=as.matrix(scaledD$Crime), alpha=1, nfolds = 10, type.measure="mse", family = "gaussian")
+
+plot(lasso)
+lasso$lambda.min
+
+#Use value of lambda that gives min. CVM
+coef(lasso, s=lasso$lambda.min)
+
+#Fit new model with new variables
+fit_lasso <- lm(Crime ~ So+M+Ed+Po1+M.F+NW+U1+U2+Wealth+Ineq+Prob, data=scaledD)
+
+summary(fit_lasso)
+
+#Check CV with LOOC
+#Using all variables
+TotSS <- sum((data$Crime - mean(data$Crime))^2)
+TotSSE <- 0
+
+for (i in 1:nrow(scaledD)){
+  fit_lasso_i = lm(Crime ~ So+M+Ed+Po1+M.F+NW+U1+U2+Wealth+Ineq+Prob, data=scaledD[-i,])
+  pred_i <- predict(fit_lasso_i, newdata=scaledD[i,])
+  TotSSE <- TotSSE + ((pred_i - data[i, 16])^2)
+}
+
+R2_all <- 1 - TotSSE/TotSS
+R2_all
+
+#Using only significant variables
+TotSS <- sum((data$Crime - mean(data$Crime))^2)
+TotSSE <- 0
+
+for (i in 1:nrow(scaledD)){
+  fit_lasso_i = lm(Crime ~ M+Ed+Po1+U2+Ineq+Prob, data=scaledD[-i,])
+  pred_i <- predict(fit_lasso_i, newdata=scaledD[i,])
+  TotSSE <- TotSSE + ((pred_i - data[i, 16])^2)
+}
+
+R2_sig <- 1 - TotSSE/TotSS
+R2_sig
+
+
+
+```
+
+```{r Elastic Net}
+#This is the elastic net regression approach
+
+#Load Packages
+library(tidyverse); library(caret); library(leaps); library(MASS); library(glmnet)
+
+#Load Data
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 11.1\\uscrime.txt", stringsAsFactors = F, header = T)
+
+#Scale Data
+scaledD <- as.data.frame(scale(data[,c(1,3,4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)]))
+scaledD <- cbind(data[,2], scaledD, data[,16])
+colnames(scaledD)[1] <- "So"
+colnames(scaledD)[16] <- "Crime"
+
+set.seed(1)
+#Vary alpha values, calculate R-squared
+R2_el <- c()
+
+for (i in 0:10){
+  fit_elastic <- cv.glmnet(x=as.matrix(scaledD[,-16]), y=as.matrix(scaledD$Crime), alpha = i/10, nfolds = 10, type.measure="mse", family="gaussian")
+  
+  R2_el <- cbind(R2_el, fit_elastic$glmnet.fit$dev.ratio[which(fit_elastic$glmnet.fit$lambda==fit_elastic$lambda.min)])
+}
+
+R2_el
+
+#The best alpha value is:
+best_alpha <- (which.max(R2_el)-1)/10
+best_alpha
+
+#Build model using best alpha
+elastic <- cv.glmnet(x=as.matrix(scaledD[,-16]), y=as.matrix(scaledD$Crime), alpha = best_alpha, nfolds = 10, type.measure = "mse", family="gaussian")
+
+coef(elastic, s=elastic$lambda.min)
+
+#Use important variables to create new model
+
+elastic_imp <- lm(Crime~So+M+Ed+Po1+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob, data=scaledD)
+
+summary(elastic_imp)
+
+#Check CV with LOOC
+#Using all variables
+TotSS <- sum((data$Crime - mean(data$Crime))^2)
+TotSSE <- 0
+
+for (i in 1:nrow(scaledD)){
+  fit_elastic_i = lm(Crime~So+M+Ed+Po1+M.F+Pop+NW+U1+U2+Wealth+Ineq+Prob, data=scaledD[-i,])
+  pred_i <- predict(fit_elastic_i, newdata=scaledD[i,])
+  TotSSE <- TotSSE + ((pred_i - data[i, 16])^2)
+}
+
+R2_all <- 1 - TotSSE/TotSS
+R2_all
+
+#Using only significant variables
+TotSS <- sum((data$Crime - mean(data$Crime))^2)
+TotSSE <- 0
+
+for (i in 1:nrow(scaledD)){
+  fit_elastic_i = lm(Crime~M+Ed+Po1+U2+Ineq+Prob, data=scaledD[-i,])
+  pred_i <- predict(fit_elastic_i, newdata=scaledD[i,])
+  TotSSE <- TotSSE + ((pred_i - data[i, 16])^2)
+}
+
+R2_sig <- 1 - TotSSE/TotSS
+R2_sig
+```
+
+

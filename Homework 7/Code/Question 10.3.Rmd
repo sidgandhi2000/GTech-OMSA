@@ -1,0 +1,192 @@
+---
+title: "Question 10.3"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r 10.3.1}
+#Load Libraries
+library(pROC)
+
+#Load Data  
+data <- read.table("C:\\Users\\Sid\\OneDrive\\Desktop\\Data 10.3\\germancredit.txt",
+stringsAsFactors = F, header = F)
+
+#Convert the 1s and 2s to 0s and 1s for the logistic regression
+data$V21[data$V21==1] <- 0
+data$V21[data$V21==2] <- 1
+
+set.seed(10)
+
+#Use a 70-30 split of training and testing data
+nrows <- nrow(data)
+train_set <- sample(1:nrows, size = round(nrows*0.7))
+train <- data[train_set,]
+validate <- data[-train_set,]
+
+#Perform iterations to create logistic regression model
+#Use all variables first
+lreg <- glm(V21~., family=binomial(link = "logit"), data = train)
+summary(lreg)
+
+#Create second iteration with all variables with p < 0.05
+lreg <- glm(V21~ V1+V2+V3+V4+V5+V6+V8+V10+V12+V14+V15, family=binomial(link = "logit"), data = train)
+summary(lreg)
+
+#Create third iteration with all variables with p < 0.05
+lreg <- glm(V21~ V1+V2+V3+V4+V5+V6+V8+V10+V14+V15, family=binomial(link = "logit"), data = train)
+summary(lreg)
+
+#Address the categorical variables
+train$V1A13[train$V1 == "A13"] <- 1
+train$V1A13[train$V1 != "A13"] <- 0
+
+train$V1A14[train$V1 == "A14"] <- 1
+train$V1A14[train$V1 != "A14"] <- 0
+
+train$V3A34[train$V3 == "A34"] <- 1
+train$V3A34[train$V3 != "A34"] <- 0
+
+train$V4A41[train$V4 == "A41"] <- 1
+train$V4A41[train$V4 != "A41"] <- 0
+
+train$V4A410[train$V4 == "A410"] <- 1
+train$V4A410[train$V4 != "A410"] <- 0
+
+train$V4A42[train$V4 == "A42"] <- 1
+train$V4A42[train$V4 != "A42"] <- 0
+
+train$V4A43[train$V4 == "A43"] <- 1
+train$V4A43[train$V4 != "A43"] <- 0
+
+train$V4A49[train$V4 == "A49"] <- 1
+train$V4A49[train$V4 != "A49"] <- 0
+
+train$V6A64[train$V6 == "A64"] <- 1
+train$V6A64[train$V6 != "A64"] <- 0
+
+train$V6A65[train$V6 == "A65"] <- 1
+train$V6A65[train$V6 != "A65"] <- 0
+
+train$V10A103[train$V10 == "A103"] <- 1
+train$V10A103[train$V10 != "A103"] <- 0
+
+train$V14A143[train$V14 == "A143"] <- 1
+train$V14A143[train$V14 != "A143"] <- 0
+
+train$V15A152[train$V15 == "A152"] <- 1
+train$V15A152[train$V15 != "A152"] <- 0
+
+lreg <- glm(V21~ V1A13+V1A14+V2+V3A34+V4A41+V4A410+V4A42+V4A43+V4A49+V5+V6A64+V6A65+V8+V10A103+V14A143+V15A152, family=binomial(link = "logit"), data = train)
+summary(lreg)
+
+
+#Now we can validate
+validate$V1A13[validate$V1 == "A13"] <- 1
+validate$V1A13[validate$V1 != "A13"] <- 0
+
+validate$V1A14[validate$V1 == "A14"] <- 1
+validate$V1A14[validate$V1 != "A14"] <- 0
+
+validate$V3A34[validate$V3 == "A34"] <- 1
+validate$V3A34[validate$V3 != "A34"] <- 0
+
+validate$V4A41[validate$V4 == "A41"] <- 1
+validate$V4A41[validate$V4 != "A41"] <- 0
+
+validate$V4A410[validate$V4 == "A410"] <- 1
+validate$V4A410[validate$V4 != "A410"] <- 0
+
+validate$V4A42[validate$V4 == "A42"] <- 1
+validate$V4A42[validate$V4 != "A42"] <- 0
+
+validate$V4A43[validate$V4 == "A43"] <- 1
+validate$V4A43[validate$V4 != "A43"] <- 0
+
+validate$V4A49[validate$V4 == "A49"] <- 1
+validate$V4A49[validate$V4 != "A49"] <- 0
+
+validate$V6A64[validate$V6 == "A64"] <- 1
+validate$V6A64[validate$V6 != "A64"] <- 0
+
+validate$V6A65[validate$V6 == "A65"] <- 1
+validate$V6A65[validate$V6 != "A65"] <- 0
+
+validate$V10A103[validate$V10 == "A103"] <- 1
+validate$V10A103[validate$V10 != "A103"] <- 0
+
+validate$V14A143[validate$V14 == "A143"] <- 1
+validate$V14A143[validate$V14 != "A143"] <- 0
+
+validate$V15A152[validate$V15 == "A152"] <- 1
+validate$V15A152[validate$V15 != "A152"] <- 0
+
+#Now we can test the model
+pred <- predict(lreg, validate, type = "response")
+pred
+
+#Threshold is 0.5 here
+rounded_pred <- as.integer(pred > 0.5)
+
+#Create confusion matrix
+tab <- table(rounded_pred, validate$V21)
+tab
+
+#Calculate accuracy
+accuracy <- (tab[1,1] + tab[2,2])/sum(tab)
+accuracy
+
+#Create ROC curve
+curve <- roc(validate$V21, rounded_pred)
+accuracy
+curve
+plot(curve, main="Receiver Operating Characteristic (ROC) Curve")
+
+```
+
+
+
+```{r 10.3.2}
+
+#We can iterate through different threshold values to find the best ones
+loss <- c()
+
+for(x in 1:100) {
+  rounded_pred <- as.integer(pred > (x/100))
+  tmatrix <- as.matrix(table(rounded_pred, validate$V21))
+  if(nrow(tmatrix)>1){
+    c1 <- tmatrix[2,1]
+  }else{
+    c1 <- 0
+  }
+  if(ncol(tmatrix) > 1){
+    c2 <- tmatrix[1,2]
+  }else{
+    c2 <- 0
+  }
+  #Perform lost of cost calculations
+  loss <- c(loss, c2*5 + c1)
+}
+
+plot(c(1:100)/100,loss,xlab = "Threshold Values",ylab = "Loss Values",main = "Loss vs. Threshold")
+
+loss
+which.min(loss)
+
+
+rounded_pred <- as.integer(pred > (which.min(loss)/100))
+tab <- table(rounded_pred, validate$V21)
+accuracy <- (tab[1,1] + tab[2,2])/sum(tab)
+curve <- roc(validate$V21, rounded_pred)
+
+accuracy
+curve
+
+```

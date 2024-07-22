@@ -1,0 +1,133 @@
+---
+title: "Question 2.2.1"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r 2.2.1}
+#Load library
+library(kernlab)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\Downloads\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Create the model with scaling
+model <- ksvm(as.matrix(data[,1:10]), data[,11], type="C-svc", 
+              kernel="vanilladot", C=100, scaled=T)
+
+#Calculate a1…am
+a <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a
+
+#Calculate a0
+a0 <- -model@b
+a0
+
+#See what the model predicts
+pred <- predict(model,data[,1:10])
+pred
+
+#See what fraction of the model’s predictions match the actual classification
+sum(pred == data[,11]) / nrow(data)
+
+```
+
+Using the stuff calculated above, the classifier equation is:
+- 0.0010065348v1 - 0.0011729048v2 - 0.0016261967v3 + 0.0030064203v4 + 1.0049405641v5 - 0.0028259432v6 + 0.0002600295v7 - 0.0005349551v8 - 0.0012283758v9 + 0.1063633995v10 + 0.08158492 = 0
+
+Overall, 189 support vectors were used to generate the classifier 
+
+With this SVM, there was also a training error of 0.1360856
+
+Ultimately, with C = 100, the percentage of the model's predictions that are correct is 86.4%
+
+```{r 2.2.1 Explorations: Without Scaling}
+
+
+#What happens if we create a model without scaling?
+model_without_scaling <- ksvm(as.matrix(data[,1:10]), data[,11], type="C-svc", 
+              kernel="vanilladot", C=100, scaled=F)
+
+#Calculate a1…am
+a <- colSums(model_without_scaling@xmatrix[[1]] * 
+               model_without_scaling@coef[[1]])
+a
+
+#Calculate a0
+a0 <- -model_without_scaling@b
+a0
+
+#See what the model predicts
+pred_without_scaling <- predict(model_without_scaling,data[,1:10])
+pred_without_scaling
+
+#See what fraction of the model’s predictions match the actual classification
+sum(pred_without_scaling == data[,11]) / nrow(data)
+
+```
+
+Here the classifier equation is: 
+- 0.0483050561v1 - 0.0083148473v2 - 0.0836550114v3 + 0.1751121271v4 + 1.8254844547v5 + 0.2763673361v6 + 0.0654782414v7 - 0.1108211169v8 - 0.0047229653v9 - 0.0007764962v10 + 0.5255393 = 0
+
+And, keeping C = 100, the percentage of the model's predictions that are correct is 72.2%. Therefore we can see that without scaling, the percentage of correct predictions decreases. 
+
+For more information, in this model without scaling, 186 support vectors are used and there is an error of 0.2782875
+
+```{r 2.2.1 Explorations: With a Very High C Value}
+
+
+#What happens if we create a model with a value much higher than C=100?
+model_with_highC <- ksvm(as.matrix(data[,1:10]), data[,11], type="C-svc", 
+              kernel="vanilladot", C=100000, scaled=T)
+
+#Calculate a1…am
+a <- colSums(model_with_highC@xmatrix[[1]] * 
+               model_with_highC@coef[[1]])
+a
+
+#Calculate a0
+a0 <- -model_with_highC@b
+a0
+
+#See what the model predicts
+pred_with_highC <- predict(model_with_highC,data[,1:10])
+pred_with_highC
+
+#See what fraction of the model’s predictions match the actual classification
+sum(pred_with_highC == data[,11]) / nrow(data)
+
+```
+As we can see here, with C = 100000, the percentage of the model's classifications that are correct is still similarly high to that of the model with C = 100. In this case, the percentage is 86.4% whereas in the original it was also 86.4%. If the C-value were to be increased even more (e.g., C = 1000000000; code not shown here), then there is a more apparent change in the percentage of correct predictions: 80.2%. This may be because as the value for C increases, the margin decreases. A large value of C can also cause more "correct" points to be left out. A visual representation of this would be a hyperplane being pushed too far to the right, thus causing some people with good credit to be rejected (as pushing to high C means we are trying to allow for less outliers). 
+
+```{r 2.2.1 Explorations: With a Very Low C Value}
+
+
+#What happens if we create a model with a value much lower than C=100?
+model_with_lowC <- ksvm(as.matrix(data[,1:10]), data[,11], type="C-svc", 
+              kernel="vanilladot", C=0.00000000000001, scaled=T)
+
+#Calculate a1…am
+a <- colSums(model_with_lowC@xmatrix[[1]] * 
+               model_with_lowC@coef[[1]])
+a
+
+#Calculate a0
+a0 <- -model_with_lowC@b
+a0
+
+#See what the model predicts
+pred_with_lowC <- predict(model_with_lowC,data[,1:10])
+pred_with_lowC
+
+#See what fraction of the model’s predictions match the actual classification
+sum(pred_with_lowC == data[,11]) / nrow(data)
+
+```
+In this instance where we are using a very low C value (C = 0.00000000000001), the percentage of correct classifications by the model decreases to 54.7%. This might be explained by the fact that when C is decreased, it creates a hyperplane with a larger margin, which can result in more points being misclassified. 

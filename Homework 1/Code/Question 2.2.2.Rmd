@@ -1,0 +1,73 @@
+---
+title: "Question 2.2.2 Real"
+author: "Siddharth Gandhi"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r 2.2.2 anovadot}
+#Process using anovadot kernel
+
+#Load library
+library(kernlab)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\Downloads\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Create the model with scaling
+model <- ksvm(as.matrix(data[,1:10]), data[,11], type="C-svc", 
+              kernel="anovadot", C=100, scaled=T)
+
+#Calculate a1…am
+a <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a
+
+#Calculate a0
+a0 <- -model@b
+a0
+
+#See what the model predicts
+pred <- predict(model,data[,1:10])
+pred
+
+#See what fraction of the model’s predictions match the actual classification
+sum(pred == data[,11]) / nrow(data)
+
+```
+
+```{r 2.2.2 rbfdot}
+#Process using rbfdot kernel
+
+#Load library
+library(kernlab)
+
+#Load data
+data <- read.table("C:\\Users\\Sid\\Downloads\\credit_card_data.txt", 
+                   stringsAsFactors = F, header = F)
+
+#Create the model with scaling
+model <- ksvm(as.matrix(data[,1:10]), data[,11], type="C-svc", 
+              kernel="rbfdot", C=100, scaled=T)
+
+#Calculate a1…am
+a <- colSums(model@xmatrix[[1]] * model@coef[[1]])
+a
+
+#Calculate a0
+a0 <- -model@b
+a0
+
+#See what the model predicts
+pred <- predict(model,data[,1:10])
+pred
+
+#See what fraction of the model’s predictions match the actual classification
+sum(pred == data[,11]) / nrow(data)
+
+```
